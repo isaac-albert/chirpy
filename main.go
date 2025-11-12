@@ -1,19 +1,33 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/isaac-albert/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 const port = ":8080"
 
 type apiConfig struct {
 	fileServerhits atomic.Int32
+	dbQuery *database.Queries
 }
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Printf("error opening a connection to Data base")
+		os.Exit(1)
+	}
+	dbQueries := database.New(db)
 	mux := http.NewServeMux()
 
 	//filepathRoot := http.Dir(".")
@@ -21,6 +35,7 @@ func main() {
 	hand := http.StripPrefix("/app", http.FileServer(assetpathRoot))
 	apiCfg := &apiConfig{
 		fileServerhits: atomic.Int32{},
+		dbQuery: dbQueries,
 	}
 	apiCfg.fileServerhits.Store(0)
 
@@ -40,37 +55,4 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", assetpathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	htmlSnippet := fmt.Sprintf(`<html>
-  <body>
-    <h1>Welcome, Chirpy Admin</h1>
-    <p>Chirpy has been visited %d times!</p>
-  </body>
-</html>`, cfg.fileServerhits.Load())
-	w.Write([]byte(htmlSnippet))
-}
-
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, req *http.Request) {
-	cfg.fileServerhits.Store(0)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hits reset to 0\n"))
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	// ...
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileServerhits.Add(1)
-		next.ServeHTTP(w, r)
-	})
-
-}
-
-func handlerReadiness(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
