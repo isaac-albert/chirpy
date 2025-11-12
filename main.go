@@ -29,6 +29,7 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", http.HandlerFunc(handlerReadiness))
 	mux.HandleFunc("GET /admin/metrics", http.HandlerFunc(apiCfg.handlerMetrics))
 	mux.HandleFunc("POST /admin/reset", http.HandlerFunc(apiCfg.handlerReset))
+	mux.HandleFunc("POST /api/validate_chirp", http.HandlerFunc(ParseJson))
 
 	// /http.FileServer(assetpathRoot)
 
