@@ -31,3 +31,15 @@ func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 	)
 	return i, err
 }
+
+const deleteTable = `-- name: DeleteTable :execrows
+DELETE FROM users
+`
+
+func (q *Queries) DeleteTable(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTable)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

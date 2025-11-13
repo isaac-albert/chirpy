@@ -7,3 +7,6 @@ VALUES (
     $1
 )
 RETURNING *;
+
+-- name: DeleteTable :execrows
+DELETE FROM users;

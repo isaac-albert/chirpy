@@ -17,11 +17,13 @@ const port = ":8080"
 type apiConfig struct {
 	fileServerhits atomic.Int32
 	dbQuery *database.Queries
+	Platfrom string
 }
 
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	pl := os.Getenv("PLATFORM")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Printf("error opening a connection to Data base")
@@ -30,23 +32,25 @@ func main() {
 	dbQueries := database.New(db)
 	mux := http.NewServeMux()
 
-	//filepathRoot := http.Dir(".")
+	
 	assetpathRoot := http.Dir(".")
 	hand := http.StripPrefix("/app", http.FileServer(assetpathRoot))
 	apiCfg := &apiConfig{
 		fileServerhits: atomic.Int32{},
 		dbQuery: dbQueries,
+		Platfrom: pl,
 	}
 	apiCfg.fileServerhits.Store(0)
 
-	//GetMiddlware(apiCfg.middlewareMetricsInc(hand))
+	
 	mux.Handle("GET /app/", apiCfg.middlewareMetricsInc(hand))
+	mux.HandleFunc("POST /api/users", http.HandlerFunc(apiCfg.apiQueryHandler))
 	mux.HandleFunc("GET /api/healthz", http.HandlerFunc(handlerReadiness))
 	mux.HandleFunc("GET /admin/metrics", http.HandlerFunc(apiCfg.handlerMetrics))
 	mux.HandleFunc("POST /admin/reset", http.HandlerFunc(apiCfg.handlerReset))
 	mux.HandleFunc("POST /api/validate_chirp", http.HandlerFunc(ParseJson))
 
-	// /http.FileServer(assetpathRoot)
+	
 
 	srv := &http.Server{
 		Addr:    port,
