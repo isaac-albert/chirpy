@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -32,6 +34,36 @@ func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 	return i, err
 }
 
+const createUserMessage = `-- name: CreateUserMessage :one
+INSERT INTO userchirps (id, created_at, updated_at, body, user_id)
+VALUES (
+    gen_random_uuid(),
+    NOW(),
+    NOW(),
+    $1,
+    $2
+)
+RETURNING id, created_at, updated_at, body, user_id
+`
+
+type CreateUserMessageParams struct {
+	Body   string
+	UserID uuid.UUID
+}
+
+func (q *Queries) CreateUserMessage(ctx context.Context, arg CreateUserMessageParams) (Userchirp, error) {
+	row := q.db.QueryRowContext(ctx, createUserMessage, arg.Body, arg.UserID)
+	var i Userchirp
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const deleteTable = `-- name: DeleteTable :execrows
 DELETE FROM users
 `
@@ -42,4 +74,56 @@ func (q *Queries) DeleteTable(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const getMessage = `-- name: GetMessage :one
+SELECT id, created_at, updated_at, body, user_id FROM userchirps
+WHERE id = $1
+`
+
+func (q *Queries) GetMessage(ctx context.Context, id uuid.UUID) (Userchirp, error) {
+	row := q.db.QueryRowContext(ctx, getMessage, id)
+	var i Userchirp
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const getUsers = `-- name: GetUsers :many
+SELECT id, created_at, updated_at, body, user_id FROM userchirps 
+ORDER BY created_at ASC
+`
+
+func (q *Queries) GetUsers(ctx context.Context) ([]Userchirp, error) {
+	rows, err := q.db.QueryContext(ctx, getUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Userchirp
+	for rows.Next() {
+		var i Userchirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -44,11 +44,13 @@ func main() {
 
 	
 	mux.Handle("GET /app/", apiCfg.middlewareMetricsInc(hand))
+	mux.HandleFunc("POST /api/chirps", http.HandlerFunc(apiCfg.ParseMessage))
+	mux.HandleFunc("GET /api/chirps", http.HandlerFunc(apiCfg.GetMessages))
+	mux.HandleFunc("GET /api/chirps/{chirpID}", http.HandlerFunc(apiCfg.GetSingleMessage))
 	mux.HandleFunc("POST /api/users", http.HandlerFunc(apiCfg.apiQueryHandler))
 	mux.HandleFunc("GET /api/healthz", http.HandlerFunc(handlerReadiness))
 	mux.HandleFunc("GET /admin/metrics", http.HandlerFunc(apiCfg.handlerMetrics))
 	mux.HandleFunc("POST /admin/reset", http.HandlerFunc(apiCfg.handlerReset))
-	mux.HandleFunc("POST /api/validate_chirp", http.HandlerFunc(ParseJson))
 
 	
 

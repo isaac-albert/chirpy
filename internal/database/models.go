@@ -16,3 +16,11 @@ type User struct {
 	UpdatedAt time.Time
 	Email     string
 }
+
+type Userchirp struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Body      string
+	UserID    uuid.UUID
+}
